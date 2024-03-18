@@ -1,0 +1,31 @@
+### Initial Data Cleaning in PostGre SQL ###
+
+SELECT * FROM piazza.cs6601_np_anonymized 
+WHERE (subject is not null
+and subject not like ‘%Student Introductions%’
+and subject not like ‘%Search for Teammates!%’)
+and (folders is not null)
+and (submission_html_removed is not null)
+and (length(submission_html_removed) > 20);
+
+### Creating New Table for KNN Model ###
+
+import pandas as pd
+
+df = pd.read_excel('pizza data user roles.xlsx')
+
+followup_df = df[df['Part of Post'].str.contains("followup", na=False)]
+replyToFollowup_df = df[df['Part of Post'].str.contains("reply_to_followup", na=False)]
+
+followup_count = followup_df.groupby('final_grades').size()
+replyToFollowup_count = replyToFollowup_df.groupby('final_grades').size()
+
+followup_count = followup_count.rename_axis('Final Grades').reset_index(name='# of Posts')
+replyToFollowup_count = replyToFollowup_count.rename_axis('Final Grades').reset_index(name='# of Replies')
+
+print(followup_count)
+print(replyToFollowup_count)
+
+combined_df = pd.merge(followup_count, replyToFollowup_count, on='Final Grades', how='outer')
+print(combined_df)
+combined_df.to_csv("StudentRepliesAndPosts.csv", index=False)
