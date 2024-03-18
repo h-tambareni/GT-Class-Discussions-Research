@@ -1,0 +1,64 @@
+### K-Nearest Neighbor Optimization for 2 Predictors and Response of Final Grade ###
+### Created Heatmap to place new variables and predict final grade on k-nearest points ###
+
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+data = pd.read_csv('StudentRepliesAndPosts.csv')
+data['# of Replies'].fillna(0, inplace=True)
+
+X = data[['# of Posts', '# of Replies']]
+y = data['Final Grades']
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+
+k_values = range(1, 31)
+rmse_values = []
+
+for k in k_values:
+    knn_model = KNeighborsRegressor(n_neighbors=k)
+    knn_model.fit(X_train, y_train)
+    predictions = knn_model.predict(X_test)
+    mse = mean_squared_error(y_test, predictions)
+    rmse = np.sqrt(mse)
+    rmse_values.append(rmse)
+
+optimal_k = k_values[np.argmin(rmse_values)]
+min_rmse = min(rmse_values)
+print(f"Optimal number of neighbors (k): {optimal_k}")
+print(f"Minimum RMSE: {min_rmse}")
+
+plt.figure(figsize=(10, 6))
+plt.plot(k_values, rmse_values, marker='o', linestyle='-')
+plt.title('KNN Regression: RMSE vs. Number of Neighbors')
+plt.xlabel('Number of Neighbors (k)')
+plt.ylabel('Root Mean Squared Error (RMSE)')
+plt.xticks(k_values)
+plt.grid(True)
+plt.show()
+
+
+x_min, x_max = X_scaled[:, 0].min() - 1, X_scaled[:, 0].max() + 1
+y_min, y_max = X_scaled[:, 1].min() - 1, X_scaled[:, 1].max() + 1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1),
+                     np.arange(y_min, y_max, 0.1))
+
+Z = knn_model.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = Z.reshape(xx.shape)
+
+plt.figure(figsize=(12, 8))
+plt.contourf(xx, yy, Z, alpha=0.4)  # Plotting the predicted grades in the background
+plt.scatter(X_scaled[:, 0], X_scaled[:, 1], c=y, s=20, edgecolor='k')  # Plotting the actual data points
+plt.title("KNN Regression (k=5)")
+plt.xlabel('# of Posts (standardized)')
+plt.ylabel('# of Replies (standardized)')
+plt.colorbar(label='Final Grades')
+plt.show()
