@@ -1,0 +1,36 @@
+from transformers import pipeline
+from google.colab import drive
+drive.mount('/content/drive/')
+import pandas as pd
+
+data_path = '/content/drive/My Drive/Colab Notebooks/student_posts_sorted.csv'
+data = pd.read_csv(data_path)
+
+data['submission_html_removed'] = data['submission_html_removed'].astype(str)
+MAX_LENGTH = 512
+grouped_text = data.groupby('post_number')['submission_html_removed'].apply(' '.join)
+
+nlp = pipeline('sentiment-analysis')
+
+overall_sentiment_scores = {}
+
+for post_number, text in grouped_text.items():
+    parts = [text[i:i+MAX_LENGTH] for i in range(0, len(text), MAX_LENGTH)]
+    sentiment_score = 0
+    for part in parts:
+        result = nlp(part)[0]  # Perform an emotional analysis for each part
+        score = result['score']
+        if result['label'] == 'NEGATIVE':
+            sentiment_score -= score
+        else:
+            sentiment_score += score
+
+    average_score = sentiment_score / len(parts)
+    overall_sentiment_scores[post_number] = average_score
+
+overall_sentiment = {
+    'POSITIVE': len([score for score in overall_sentiment_scores.values() if score > 0]),
+    'NEGATIVE': len([score for score in overall_sentiment_scores.values() if score <= 0])
+}
+
+### later vectorized and tagged all words with certain sentiment scores and used SVM to soft classify as positive and negative ###
